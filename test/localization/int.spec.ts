@@ -5238,6 +5238,87 @@ describe('Localization', () => {
         expect(updated._status.xx).toBe('published')
       })
 
+      it('should keep the live version of an inaccessible collection locale that has a newer draft when publishing with locale all', async () => {
+        const doc = await payload.create({
+          collection: publicationAccessSlug as any,
+          data: { _status: 'published', title: 'filtered live' },
+          locale: 'xx',
+          publishAllLocales: false,
+        })
+        createdDocuments.push({ id: doc.id, collection: publicationAccessSlug })
+
+        await payload.update({
+          id: doc.id,
+          collection: publicationAccessSlug as any,
+          data: { title: 'filtered draft' },
+          draft: true,
+          locale: 'xx',
+        })
+
+        await payload.update({
+          id: doc.id,
+          collection: publicationAccessSlug as any,
+          data: {},
+          locale: 'all',
+          publishAllLocales: true,
+        })
+
+        const published = await payload.findByID({
+          id: doc.id,
+          collection: publicationAccessSlug as any,
+          draft: false,
+          locale: 'all',
+        })
+        expect(published._status.xx).toBe('published')
+        expect(published.title.xx).toBe('filtered live')
+
+        const latest = await payload.findByID({
+          id: doc.id,
+          collection: publicationAccessSlug as any,
+          draft: true,
+          locale: 'xx',
+        })
+        expect(latest.title).toBe('filtered draft')
+      })
+
+      it('should keep the live version of an inaccessible global locale that has a newer draft when publishing with locale all', async () => {
+        await payload.updateGlobal({
+          slug: globalWithDraftsSlug,
+          data: { _status: 'published', text: 'filtered live' },
+          locale: 'xx',
+          publishAllLocales: false,
+        })
+
+        await payload.updateGlobal({
+          slug: globalWithDraftsSlug,
+          data: { text: 'filtered draft' },
+          draft: true,
+          locale: 'xx',
+        })
+
+        await payload.updateGlobal({
+          slug: globalWithDraftsSlug,
+          data: {},
+          locale: 'all',
+          publishAllLocales: true,
+        })
+
+        const published = await payload.findGlobal({
+          slug: globalWithDraftsSlug,
+          draft: false,
+          locale: 'all',
+        })
+        expect(published._status.xx).toBe('published')
+        expect(published.text.xx).toBe('filtered live')
+
+        const latest = await payload.findGlobal({
+          slug: globalWithDraftsSlug,
+          draft: true,
+          locale: 'xx',
+        })
+        expect(latest.text).toBe('filtered draft')
+      })
+
       it('should expose publishAllLocales intent to collection hooks', async () => {
         const doc = await payload.create({
           collection: publicationHookSlug as any,
